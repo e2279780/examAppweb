@@ -1,0 +1,114 @@
+/**
+ * App.css - Styles principaux de l'application
+ * 
+ * Utilise le design system défini dans global.css
+ */
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+}
+
+/* Header */
+.app-header {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: white;
+  padding: var(--space-2xl);
+  text-align: center;
+  box-shadow: var(--shadow-md);
+}
+
+.app-header h1 {
+  font-size: var(--font-size-3xl);
+  margin-bottom: var(--space-md);
+  font-weight: 700;
+  color: white;
+}
+
+.app-header p {
+  font-size: var(--font-size-lg);
+  opacity: 0.95;
+  color: white;
+}
+
+/* Main content */
+.app-main {
+  flex: 1;
+  padding: var(--space-2xl);
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.section-intro {
+  background: white;
+  padding: var(--space-2xl);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+}
+
+.section-intro h2 {
+  color: var(--color-primary);
+  margin-bottom: var(--space-lg);
+}
+
+.section-intro p {
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-secondary);
+}
+
+.section-intro ul {
+  list-style: none;
+  margin-left: 0;
+  padding: 0;
+}
+
+.section-intro li {
+  padding: var(--space-sm) 0;
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.section-intro li::before {
+  content: '';
+  width: 4px;
+  height: 4px;
+  background-color: var(--color-primary);
+  border-radius: 50%;
+}
+
+/* Footer */
+.app-footer {
+  background-color: var(--color-bg-secondary);
+  border-top: 1px solid var(--color-border);
+  padding: var(--space-lg);
+  text-align: center;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .app-main {
+    padding: var(--space-lg);
+  }
+
+  .section-intro {
+    padding: var(--space-lg);
+  }
+
+  .app-header {
+    padding: var(--space-xl);
+  }
+
+  .app-header h1 {
+    font-size: var(--font-size-2xl);
+  }
+}
+
