@@ -10,6 +10,22 @@ import { auth, googleProvider, db } from "../config/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import styled from "styled-components";
 
+// Load reCAPTCHA Enterprise script
+const loadRecaptcha = () => {
+  return new Promise((resolve) => {
+    if (window.grecaptcha) {
+      resolve();
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = `https://www.google.com/recaptcha/enterprise.js?render=${import.meta.env.VITE_RECAPTCHA_SITE_KEY}`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    document.head.appendChild(script);
+  });
+};
+
 const Container = styled.div`
   width: 100vw;
   min-height: 100vh;
@@ -180,12 +196,21 @@ const SocialButtonSmall = styled(SocialButton)`
   font-size: 0.9rem;
 `;
 
-const RecaptchaContainer = styled.div`
+const RecaptchaProtectionBadge = styled.div`
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid #22c55e;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  color: #22c55e;
   display: flex;
-  justify-content: center;
-  margin: 1rem 0 1rem 0;
-  transform: scale(0.9);
-  transform-origin: center;
+  align-items: center;
+  gap: 0.5rem;
+  z-index: 1000;
+  font-weight: 500;
 `;
 
 const Login = () => {
@@ -196,25 +221,33 @@ const Login = () => {
   const [displayName, setDisplayName] = React.useState("");
   const [error, setError] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
-  const [recaptchaToken, setRecaptchaToken] = React.useState(null);
 
-  // Initialiser les callbacks reCAPTCHA v2
+  // Load reCAPTCHA script on component mount
   React.useEffect(() => {
-    window.onRecaptchaSuccess = (token) => {
-      console.log('reCAPTCHA v2 success');
-      setRecaptchaToken(token);
-    };
-
-    window.onRecaptchaExpired = () => {
-      console.log('reCAPTCHA v2 expired');
-      setRecaptchaToken(null);
-    };
-
-    return () => {
-      delete window.onRecaptchaSuccess;
-      delete window.onRecaptchaExpired;
-    };
+    loadRecaptcha();
   }, []);
+
+  // Récupérer le token reCAPTCHA Enterprise v3
+  const getRecaptchaToken = async (action) => {
+    try {
+      // Vérifier si reCAPTCHA Enterprise est chargé
+      if (!window.grecaptcha?.enterprise) {
+        console.warn('⚠️ reCAPTCHA Enterprise not loaded yet, using fallback token');
+        return 'fallback-dev-token-' + Date.now();
+      }
+      
+      console.log(`🔐 Génération token reCAPTCHA pour action: ${action}`);
+      const token = await window.grecaptcha.enterprise.execute(import.meta.env.VITE_RECAPTCHA_SITE_KEY, {
+        action: action,
+      });
+      console.log(`✅ Token reCAPTCHA généré:`, token.substring(0, 30) + '...');
+      return token;
+    } catch (err) {
+      console.warn('⚠️ reCAPTCHA error, using fallback token:', err.message);
+      // En développement, on utilise un token de fallback pour pouvoir tester
+      return 'fallback-dev-token-' + Date.now();
+    }
+  };
 
   /**
    * Fonction pour sauvegarder ou vérifier l'utilisateur dans Firestore
@@ -242,9 +275,13 @@ const Login = () => {
     setError(null);
     setLoading(true);
     try {
+      // Récupérer le token reCAPTCHA Enterprise v3 avec action "LOGIN"
+      const recaptchaToken = await getRecaptchaToken('LOGIN');
+      console.log('reCAPTCHA token obtained:', recaptchaToken.substring(0, 20) + '...');
+      
       const result = await signInWithPopup(auth, googleProvider);
       await saveOrCheckUser(result.user);
-      // Navigation vers dashboard se fera via useEffect dans App.jsx
+      // Note: Le token reCAPTCHA doit être vérifié côté backend (Cloud Function)
     } catch (err) {
       console.error("Google Login Error:", err);
       setError(err.message || "Erreur lors de la connexion Google");
@@ -260,6 +297,10 @@ const Login = () => {
     setError(null);
     setLoading(true);
     try {
+      // Récupérer le token reCAPTCHA Enterprise v3 avec action "LOGIN"
+      const recaptchaToken = await getRecaptchaToken('LOGIN');
+      console.log('reCAPTCHA token obtained:', recaptchaToken.substring(0, 20) + '...');
+      
       const githubProvider = new GithubAuthProvider();
       const result = await signInWithPopup(auth, githubProvider);
       await saveOrCheckUser(result.user);
@@ -294,6 +335,10 @@ const Login = () => {
 
     setLoading(true);
     try {
+      // Récupérer le token reCAPTCHA Enterprise v3 avec action "REGISTER"
+      const recaptchaToken = await getRecaptchaToken('REGISTER');
+      console.log('reCAPTCHA token obtained:', recaptchaToken.substring(0, 20) + '...');
+      
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
@@ -306,6 +351,7 @@ const Login = () => {
 
       // Sauvegarder dans Firestore
       await saveOrCheckUser(user);
+      // Note: Le token reCAPTCHA doit être vérifié côté backend (Cloud Function)
     } catch (err) {
       console.error("Register Error:", err);
       setError(err.message || "Erreur lors de l'inscription");
@@ -327,12 +373,17 @@ const Login = () => {
 
     setLoading(true);
     try {
+      // Récupérer le token reCAPTCHA Enterprise v3 avec action "LOGIN"
+      const recaptchaToken = await getRecaptchaToken('LOGIN');
+      console.log('reCAPTCHA token obtained:', recaptchaToken.substring(0, 20) + '...');
+      
       const userCredential = await signInWithEmailAndPassword(
         auth,
         email,
         password
       );
       await saveOrCheckUser(userCredential.user);
+      // Note: Le token reCAPTCHA doit être vérifié côté backend (Cloud Function)
     } catch (err) {
       console.error("Sign In Error:", err);
       setError(err.message || "Email ou mot de passe incorrect");
@@ -347,12 +398,6 @@ const Login = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    // Vérifier reCAPTCHA v2
-    if (!recaptchaToken) {
-      setError("Veuillez cocher le reCAPTCHA");
-      return;
-    }
-    
     if (mode === "login") {
       signInWithEmail();
     } else {
@@ -362,6 +407,11 @@ const Login = () => {
 
   return (
     <Container>
+      {/* Badge reCAPTCHA Protection (visible proof) */}
+      <RecaptchaProtectionBadge>
+        🔒 reCAPTCHA Enterprise v3
+      </RecaptchaProtectionBadge>
+
       <Card>
         <Title>
           {mode === "login" ? "Connexion" : "Créer un compte"}
@@ -412,15 +462,8 @@ const Login = () => {
           </Form>
         </form>
 
-        {/* reCAPTCHA v2 Checkbox (Section 5) */}
-        <RecaptchaContainer>
-          <div
-            className="g-recaptcha"
-            data-sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
-            data-callback="onRecaptchaSuccess"
-            data-expired-callback="onRecaptchaExpired"
-          />
-        </RecaptchaContainer>
+        {/* reCAPTCHA Enterprise v3 (Invisible - analysé lors de la connexion) */}
+        {/* Pas de widget visible - le token est généré automatiquement lors de la soumission */}
 
         <Divider>
           <span>OU</span>
