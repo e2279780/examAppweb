@@ -1,6 +1,6 @@
 /**
  * Dashboard.jsx – Page principale après authentification
- * SECTION 3 : Intégration de Firestore CRUD
+ * SECTION 3 & 4 : Intégration de Firestore CRUD + Storage
  */
 
 import React from 'react';
@@ -71,7 +71,8 @@ const Dashboard = ({ currentUser }) => {
       </Section>
 
       {/* SECTION 3 : FIRESTORE CRUD */}
-      <TaskManager />
+      {/* Mode DÉMO : affiche TOUTES les tâches pour la démo vidéo */}
+      <TaskManager showAllTasks={true} />
 
       <Section>
         <Title>📋 Services activés</Title>
@@ -82,7 +83,7 @@ const Dashboard = ({ currentUser }) => {
           ✅ <strong>Firestore Database (CRUD en temps réel) - SECTION 3</strong>
         </Description>
         <Description style={{ marginBottom: '1rem' }}>
-          ⏳ Firebase Storage (Upload de fichiers)
+          ✅ <strong>Firebase Storage (Upload de fichiers) - SECTION 4</strong>
         </Description>
         <Description style={{ marginBottom: '1rem' }}>
           ⏳ Cloud Functions (appels sécurisés OpenAI)

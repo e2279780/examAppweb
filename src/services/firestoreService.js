@@ -86,14 +86,24 @@ export const getTasks = async (userId) => {
  * ======================================
  * READ REALTIME - Tâches en temps réel
  * (listener qui met à jour automatiquement)
+ * 
+ * @param {string} userId - ID de l'utilisateur
+ * @param {function} callback - Fonction appelée à chaque changement
+ * @param {boolean} showAllTasks - Si true, affiche TOUTES les tâches (mode démo)
  * ======================================
  */
-export const onTasksChange = (userId, callback) => {
+export const onTasksChange = (userId, callback, showAllTasks = false) => {
   try {
-    console.log('🔔 Création d\'un listener temps réel pour:', userId);
+    console.log('🔔 Création d\'un listener temps réel');
+    console.log(showAllTasks ? '👥 Mode DÉMO : Toutes les tâches' : '🔒 Mode SÉCURISÉ : Tâches de l\'utilisateur uniquement');
     
     const tasksRef = collection(db, 'tasks');
-    const q = query(tasksRef, where('userId', '==', userId));
+    
+    // Si mode démo : afficher TOUTES les tâches
+    // Sinon : afficher seulement les tâches de l'utilisateur
+    const q = showAllTasks 
+      ? query(tasksRef)
+      : query(tasksRef, where('userId', '==', userId));
     
     // onSnapshot = listener permanent
     // À chaque changement, la callback est appelée

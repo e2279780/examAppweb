@@ -5,6 +5,9 @@
  * Démontre le CRUD complet en temps réel
  * 
  * SECTION 3 : Firestore CRUD
+ * 
+ * Props:
+ * - showAllTasks: boolean - Si true, affiche TOUTES les tâches (mode démo)
  */
 
 import React, { useState, useEffect } from 'react';
@@ -14,8 +17,10 @@ import {
   onTasksChange,
   deleteTask,
   toggleComplete,
+  updateTask,
 } from '../services/firestoreService';
 import { useAuth } from '../hooks/useAuth';
+import FileUpload from './FileUpload';
 
 /**
  * STYLED COMPONENTS
@@ -168,6 +173,16 @@ const TaskActions = styled.div`
   }
 `;
 
+const TaskImage = styled.img`
+  width: 100%;
+  max-width: 300px;
+  max-height: 200px;
+  border-radius: 0.5rem;
+  border: 1px solid #374151;
+  margin-top: 0.5rem;
+  object-fit: cover;
+`;
+
 const DeleteButton = styled.button`
   background: linear-gradient(to right, #ef4444, #dc2626);
   border: none;
@@ -223,13 +238,14 @@ const ErrorMessage = styled.div`
  * COMPOSANT PRINCIPAL
  */
 
-const TaskManager = () => {
+const TaskManager = ({ showAllTasks = false }) => {
   const { currentUser } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [expandedTaskId, setExpandedTaskId] = useState(null); // Pour afficher l'upload d'une tâche
 
   /**
    * SETUP : Créer le listener Firestore temps réel
@@ -242,19 +258,20 @@ const TaskManager = () => {
     }
 
     console.log('🚀 Initialisation du listener Firestore');
+    console.log(showAllTasks ? '👥 Mode DÉMO activé' : '🔒 Mode sécurisé');
 
-    // Créer le listener
+    // Créer le listener (avec ou sans filtre userId)
     const unsubscribe = onTasksChange(currentUser.uid, (updatedTasks) => {
       setTasks(updatedTasks);
       setLoading(false);
-    });
+    }, showAllTasks);  // <-- Passer le flag showAllTasks
 
     // Cleanup : arrêter le listener quand le composant se démonte
     return () => {
       console.log('🛑 Arrêt du listener Firestore');
       unsubscribe();
     };
-  }, [currentUser?.uid]);
+  }, [currentUser?.uid, showAllTasks]);  // <-- Ajouter showAllTasks aux dépendances
 
   /**
    * CREATE : Ajouter une tâche
@@ -310,6 +327,32 @@ const TaskManager = () => {
     }
   };
 
+  /**
+   * UPLOAD : Ajouter une image à une tâche
+   */
+  const handleUploadSuccess = async (taskId, imageUrl) => {
+    if (!taskId || !imageUrl) {
+      console.error('❌ taskId ou imageUrl manquant');
+      return;
+    }
+
+    try {
+      setError(null);
+      console.log('📤 Mise à jour de la tâche avec l\'image');
+      
+      // Mettre à jour la tâche avec l'URL de l'image
+      await updateTask(taskId, {
+        imageUrl: imageUrl,
+      });
+      
+      console.log('✅ Image associée à la tâche');
+      setExpandedTaskId(null); // Fermer l'upload
+    } catch (err) {
+      setError(err.message || 'Erreur lors de l\'association de l\'image');
+      console.error(err);
+    }
+  };
+
   // Calcul des statistiques
   const completedCount = tasks.filter(t => t.completed).length;
   const totalCount = tasks.length;
@@ -351,28 +394,65 @@ const TaskManager = () => {
           <>
             <TaskList>
               {tasks.map(task => (
-                <TaskItem key={task.id}>
-                  <TaskContent>
-                    {/* UPDATE : Toggle completed */}
-                    <Checkbox
-                      type="checkbox"
-                      checked={task.completed}
-                      onChange={() =>
-                        handleToggleComplete(task.id, task.completed)
-                      }
-                    />
-                    <TaskTitle completed={task.completed}>
-                      {task.title}
-                    </TaskTitle>
-                  </TaskContent>
+                <div key={task.id}>
+                  <TaskItem>
+                    <TaskContent>
+                      {/* UPDATE : Toggle completed */}
+                      <Checkbox
+                        type="checkbox"
+                        checked={task.completed}
+                        onChange={() =>
+                          handleToggleComplete(task.id, task.completed)
+                        }
+                      />
+                      <TaskTitle completed={task.completed}>
+                        {task.title}
+                      </TaskTitle>
+                    </TaskContent>
 
-                  {/* DELETE : Bouton supprimer */}
-                  <TaskActions>
-                    <DeleteButton onClick={() => handleDeleteTask(task.id)}>
-                      🗑️ Supprimer
-                    </DeleteButton>
-                  </TaskActions>
-                </TaskItem>
+                    {/* DELETE + UPLOAD : Boutons d'actions */}
+                    <TaskActions>
+                      <Button
+                        onClick={() => {
+                          setExpandedTaskId(expandedTaskId === task.id ? null : task.id);
+                        }}
+                        style={{
+                          padding: '0.5rem 1rem',
+                          fontSize: '0.85rem',
+                          background: expandedTaskId === task.id 
+                            ? 'linear-gradient(to right, #ec4899, #db2777)'
+                            : 'linear-gradient(to right, #8b5cf6, #7c3aed)',
+                        }}
+                      >
+                        📷 {task.imageUrl ? 'Changer' : 'Ajouter'}
+                      </Button>
+                      <DeleteButton onClick={() => handleDeleteTask(task.id)}>
+                        🗑️ Supprimer
+                      </DeleteButton>
+                    </TaskActions>
+                  </TaskItem>
+
+                  {/* Afficher l'image si existe */}
+                  {task.imageUrl && (
+                    <TaskImage 
+                      src={task.imageUrl} 
+                      alt={task.title}
+                      style={{ marginTop: '0.75rem' }}
+                    />
+                  )}
+
+                  {/* Upload UI pour cette tâche */}
+                  {expandedTaskId === task.id && (
+                    <div style={{ marginTop: '1rem' }}>
+                      <FileUpload
+                        userId={currentUser.uid}
+                        onUploadSuccess={(imageUrl) => 
+                          handleUploadSuccess(task.id, imageUrl)
+                        }
+                      />
+                    </div>
+                  )}
+                </div>
               ))}
             </TaskList>
 
