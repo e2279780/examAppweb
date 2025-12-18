@@ -1,0 +1,67 @@
+/**
+ * FIRESTORE SECURITY RULES
+ * 
+ * À copier dans Firebase Console : 
+ * https://console.firebase.google.com → Firestore → Règles
+ * 
+ * SECTION 3 : Sécurité Firestore
+ */
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Collection "users"
+    match /users/{userId} {
+      // Seul l'utilisateur peut lire son profil
+      allow read: if request.auth.uid == userId;
+      
+      // Seul l'utilisateur peut créer/modifier son profil
+      allow create, update: if request.auth.uid == userId;
+      
+      // Seul l'utilisateur peut supprimer son profil
+      allow delete: if request.auth.uid == userId;
+    }
+
+    // Collection "tasks"
+    match /tasks/{taskId} {
+      // Seul le propriétaire de la tâche peut la lire
+      // Les données doivent avoir un champ "userId" égal à l'utilisateur connecté
+      allow read: if request.auth.uid == resource.data.userId;
+      
+      // Seul le propriétaire peut créer une tâche
+      // Le userId doit être égal à l'utilisateur qui crée
+      allow create: if request.auth.uid == request.resource.data.userId;
+      
+      // Seul le propriétaire peut modifier sa tâche
+      allow update: if request.auth.uid == resource.data.userId;
+      
+      // Seul le propriétaire peut supprimer sa tâche
+      allow delete: if request.auth.uid == resource.data.userId;
+    }
+  }
+}
+
+/**
+ * EXPLICATION DES RÈGLES :
+ * 
+ * 1. match /tasks/{taskId}
+ *    → Accède à chaque document dans la collection "tasks"
+ * 
+ * 2. allow read: if request.auth.uid == resource.data.userId
+ *    → Lecture autorisée SI l'utilisateur connecté (request.auth.uid)
+ *    → Est le propriétaire de la tâche (resource.data.userId)
+ * 
+ * 3. allow create: if request.auth.uid == request.resource.data.userId
+ *    → Création autorisée SI l'utilisateur qu'on va écrire
+ *    → Est l'utilisateur connecté
+ * 
+ * 4. allow update/delete: if request.auth.uid == resource.data.userId
+ *    → Seul le propriétaire peut modifier/supprimer
+ * 
+ * RÉSULTAT :
+ * ✅ Jean ne peut voir/modifier que SES tâches
+ * ✅ Marie ne peut voir/modifier que SES tâches
+ * ❌ Jean ne peut pas voir les tâches de Marie
+ * ❌ Aucun utilisateur non authentifié ne peut accéder
+ */

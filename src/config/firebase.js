@@ -9,7 +9,7 @@
  */
 
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
@@ -32,6 +32,9 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
+
+// Google Auth Provider (pour Sign-In avec Google)
+export const googleProvider = new GoogleAuthProvider();
 
 // Initialiser App Check avec reCAPTCHA v3 (Section 5)
 // Pour l'instant, on le met en commentaire jusqu'à la SECTION 5
