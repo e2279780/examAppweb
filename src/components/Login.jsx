@@ -180,6 +180,14 @@ const SocialButtonSmall = styled(SocialButton)`
   font-size: 0.9rem;
 `;
 
+const RecaptchaContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  margin: 1rem 0 1rem 0;
+  transform: scale(0.9);
+  transform-origin: center;
+`;
+
 const Login = () => {
   const [mode, setMode] = React.useState("login"); // "login" ou "register"
   const [email, setEmail] = React.useState("");
@@ -188,6 +196,25 @@ const Login = () => {
   const [displayName, setDisplayName] = React.useState("");
   const [error, setError] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
+  const [recaptchaToken, setRecaptchaToken] = React.useState(null);
+
+  // Initialiser les callbacks reCAPTCHA v2
+  React.useEffect(() => {
+    window.onRecaptchaSuccess = (token) => {
+      console.log('reCAPTCHA v2 success');
+      setRecaptchaToken(token);
+    };
+
+    window.onRecaptchaExpired = () => {
+      console.log('reCAPTCHA v2 expired');
+      setRecaptchaToken(null);
+    };
+
+    return () => {
+      delete window.onRecaptchaSuccess;
+      delete window.onRecaptchaExpired;
+    };
+  }, []);
 
   /**
    * Fonction pour sauvegarder ou vérifier l'utilisateur dans Firestore
@@ -319,6 +346,13 @@ const Login = () => {
    */
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    // Vérifier reCAPTCHA v2
+    if (!recaptchaToken) {
+      setError("Veuillez cocher le reCAPTCHA");
+      return;
+    }
+    
     if (mode === "login") {
       signInWithEmail();
     } else {
@@ -377,6 +411,16 @@ const Login = () => {
             </Button>
           </Form>
         </form>
+
+        {/* reCAPTCHA v2 Checkbox (Section 5) */}
+        <RecaptchaContainer>
+          <div
+            className="g-recaptcha"
+            data-sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+            data-callback="onRecaptchaSuccess"
+            data-expired-callback="onRecaptchaExpired"
+          />
+        </RecaptchaContainer>
 
         <Divider>
           <span>OU</span>

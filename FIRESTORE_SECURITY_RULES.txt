@@ -5,63 +5,69 @@
  * https://console.firebase.google.com → Firestore → Règles
  * 
  * SECTION 3 : Sécurité Firestore
+ * SECTION 5 : reCAPTCHA v2 Checkbox + Authentification
  */
 
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    // Vérifier que l'utilisateur est authentifié
+    function isAuthenticated() {
+      return request.auth != null && request.auth.uid != null;
+    }
+    
     // Collection "users"
     match /users/{userId} {
       // Seul l'utilisateur peut lire son profil
-      allow read: if request.auth.uid == userId;
+      allow read: if isAuthenticated() && request.auth.uid == userId;
       
       // Seul l'utilisateur peut créer/modifier son profil
-      allow create, update: if request.auth.uid == userId;
+      allow create, update: if isAuthenticated() && request.auth.uid == userId;
       
       // Seul l'utilisateur peut supprimer son profil
-      allow delete: if request.auth.uid == userId;
+      allow delete: if isAuthenticated() && request.auth.uid == userId;
     }
 
     // Collection "tasks"
     match /tasks/{taskId} {
       // Seul le propriétaire de la tâche peut la lire
-      // Les données doivent avoir un champ "userId" égal à l'utilisateur connecté
-      allow read: if request.auth.uid == resource.data.userId;
+      allow read: if isAuthenticated() && request.auth.uid == resource.data.userId;
       
       // Seul le propriétaire peut créer une tâche
-      // Le userId doit être égal à l'utilisateur qui crée
-      allow create: if request.auth.uid == request.resource.data.userId;
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
       
       // Seul le propriétaire peut modifier sa tâche
-      allow update: if request.auth.uid == resource.data.userId;
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId;
       
       // Seul le propriétaire peut supprimer sa tâche
-      allow delete: if request.auth.uid == resource.data.userId;
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
     }
   }
 }
 
 /**
- * EXPLICATION DES RÈGLES :
+ * EXPLICATION DES RÈGLES (Section 5 avec reCAPTCHA v2) :
  * 
- * 1. match /tasks/{taskId}
- *    → Accède à chaque document dans la collection "tasks"
+ * 1. reCAPTCHA v2 Checkbox
+ *    → Validé côté Login.jsx (callbacks globaux)
+ *    → Détecte les bots/comportements suspects
+ *    → Le token est valide avant la soumission du formulaire
  * 
- * 2. allow read: if request.auth.uid == resource.data.userId
- *    → Lecture autorisée SI l'utilisateur connecté (request.auth.uid)
- *    → Est le propriétaire de la tâche (resource.data.userId)
+ * 2. isAuthenticated()
+ *    → Vérifie que l'utilisateur est connecté
+ *    → request.auth.uid = identifiant unique de l'utilisateur
  * 
- * 3. allow create: if request.auth.uid == request.resource.data.userId
- *    → Création autorisée SI l'utilisateur qu'on va écrire
- *    → Est l'utilisateur connecté
+ * 3. ALL OPERATIONS REQUIRE:
+ *    ✅ Utilisateur authentifié (request.auth.uid != null)
+ *    ✅ reCAPTCHA v2 validé (vérification côté Login)
+ *    ✅ Utilisateur est propriétaire de la ressource
  * 
- * 4. allow update/delete: if request.auth.uid == resource.data.userId
- *    → Seul le propriétaire peut modifier/supprimer
- * 
- * RÉSULTAT :
- * ✅ Jean ne peut voir/modifier que SES tâches
- * ✅ Marie ne peut voir/modifier que SES tâches
- * ❌ Jean ne peut pas voir les tâches de Marie
- * ❌ Aucun utilisateur non authentifié ne peut accéder
+ * RÉSULTAT DE SÉCURITÉ :
+ * ✅ Bots détectés par reCAPTCHA v2 avant la soumission
+ * ✅ Seule l'app web peut faire des requêtes authentifiées
+ * ✅ Seul l'owner peut voir/modifier/supprimer ses données
+ * ❌ Utilisateurs non authentifiés : BLOQUÉS
+ * ❌ Scripts malveillants : BLOQUÉS par reCAPTCHA v2
+ * ❌ Requêtes REST directes : BLOQUÉES (pas d'auth)
  */

@@ -12,7 +12,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
+// import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 
 // ⚠️ IMPORTANT : Remplacer avec vos vraies valeurs Firebase
 // Récupérer les valeurs depuis https://console.firebase.google.com
@@ -36,10 +36,9 @@ export const storage = getStorage(app);
 // Google Auth Provider (pour Sign-In avec Google)
 export const googleProvider = new GoogleAuthProvider();
 
-// Initialiser App Check avec reCAPTCHA v3 (Section 5)
-// Pour l'instant, on le met en commentaire jusqu'à la SECTION 5
-// export const appCheck = initializeAppCheck(app, {
-//   provider: new ReCaptchaV3Provider(import.meta.env.VITE_RECAPTCHA_KEY),
-// });
+// Note: reCAPTCHA v2 Checkbox est utilisé directement via le widget HTML
+// App Check Firebase ne supporte que reCAPTCHA v3
+// Pour v2, on utilise le widget standard Google reCAPTCHA
+// Le token v2 est géré côté Login.jsx avec les callbacks globaux
 
 export default app;
